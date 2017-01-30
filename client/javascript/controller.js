@@ -69,8 +69,9 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
         socket.emit('getRooms', {});
     });
 
-    socket.on('reconnect', function(){
-        alert('You have been discconected. Please reconnect to continue!!');
+    socket.on('reconnect', function(data){
+        console.log(data)
+        alert('You have been discconected. Please reconnect to continue!!'+ data.from);
     });
 
     socket.on('gameOver', function(data){
@@ -82,7 +83,9 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
     });
 
     socket.on('youWon', function(){
+        $scope.update = 'Congratulations!!You Won The Game';
         alert('You Won The Game');
+        $scope.$apply();
     });
 
     socket.on('gameStarted', function(){
