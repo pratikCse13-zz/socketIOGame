@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html style="height: 100%">
+<head>
+  <title>Game</title>
+  
+  <!-- Materialize CSS CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css">
+  
+   
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+</head>
+<body>
+{{user.name}} in room: {{room.name}}
+<form action="/leave" method="post">
+<button id="signUp" style="float: right" class="waves-effect waves-light btn col s5">Leave Room</button>
+<input type="hidden" name="_csrf" value="{{csrfToken}}">
+<input type="hidden" name="roomId" value="{{room._id}}"> 
+</form>
+</body>
+</html>

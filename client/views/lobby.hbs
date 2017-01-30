@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html style="height: 100%" ng-app="game">
+<head>
+  <title>Room</title>
+  
+  <!-- Materialize CSS CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css">
+  
+   
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+  <script src="/../javascript/canvas.js"></script>
+</head>
+<body style="height: 100%"  ng-controller="gameController" ng-init="initialize()" ng-keydown="keyDown($event)" ng-keyup="keyUp($event)" background="">
+    <div ui-view style="height: 100%;">
+      	<div class="container-fluid">
+      			<div class="nav-wrapper">
+      				<ul>
+      					<li>
+      							
+		      			</li>	
+		      			<li>
+				      		<form style="align: right; display: inline" action="/logout" method="get"> 
+				      			<h4 style="padding: 0px; color: #EF5B25">
+		      				{{user.name}}  |
+		      				</h4>
+			                    <button id="logIn" action="/logout" class="waves-effect waves-light btn col">LOGOUT</button> 
+			                    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+			                </form>
+	      				</li>
+	      			</ul>	
+	      		</div>
+      		<div class="row" style="margin-top: 100px" ng-hide="gaming">
+	        	<div class="col s6 valign-wrapper">
+	        		<div class="card medium hoverable" style="width: 100%; height: 500px">
+	        			<div class="card-content">
+			        		<form>
+			        			<div class="class-title">
+			                        <h3 style="color: teal">Create A Room</h3>
+			                    </div>
+			        			<div class="input-field">
+			                      	<input id="name" name="name" type="text" class="validate" placeholder="Name" ng-model="newRoomName">
+			                    </div>
+			                    <div class="input-field">
+			                      	<input id="password" name="password" type="password" class="validate" placeholder="Password" ng-model="newRoomPassword">
+			                    </div>
+			                    <div class="row" style="margin-top: 20px">
+			                      	<input id="createRoom" type="submit" class="waves-effect waves-light btn col s5" placeholder="Create" ng-click="createRoom()"></input>
+			                    </div>
+			                    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+			                    <div class="alert" style="color: red; font-size: 0.9em" ng-show="createRoomError">
+			                        {{createRoomErrorMsg}}
+			                    </div>
+			        		</form>
+			        	</div>
+			        </div>		
+	        	</div>
+	        	<div class="col s6 valign-wrapper">
+	        		<div class="card large hoverable" style="width: 100%; height: 500px">
+			            <div class="card-content">
+		            		<ul>
+						        <li ><h3 style="color: teal">Join A Room</h3></li>
+				            	<ul>	
+				            		<li id="room" class="card horizontal hoverable" style="padding: 10px" ng-repeat="room in roomList">
+				        				<label style="padding: 15px">Room: </label><h5>{[{room.roomName}]}</h5> <label  style="padding: 15px">Created By:</label><h5>{[{room.ownerName}]}</h5>
+			                        	<input type="submit" class="waves-effect waves-light btn col s4" style="margin-top: 5px" ng-click="joinRoom(room)"></input>
+					        		</li>
+					        	</ul>	
+					        	<div class="alert" style="color: red; font-size: 0.9em" ng-show="joinRoomError">
+			                        {[{joinRoomErrorMsg}]}
+			                    </div>
+					        	<div class="input-field">
+			                      	<input id="password" name="roomPassword" type="password" class="validate" placeholder="Password" ng-model="joinRoomPassword">
+			                    </div>
+						    	<input type="hidden" name="_csrf" value="{{this.csrfToken}}">
+						    </ul>
+			            </div>
+			        </div>
+	        	</div>
+	        </div>
+	        <div class="row" style="padding: 20px; padding-bottom: 0px; margin-bottom: 5px">
+	        	<div class="col s6" style="height: 40px">
+	        		<button type="submit" style="margin: 5px" class="waves-effect waves-light btn col s3" ng-click="startGame()" ng-show="creator">Start Game</button>
+	        		<button type="submit" style="margin: 5px" class="waves-effect waves-light btn col s3" ng-click="leaveRoom()" ng-show="gaming">Leave Game</button>
+	        	</div>
+	        	<div class="col s3">
+	        		
+	        	</div>
+	        	
+	        </div>
+	        <div class="row" style="margin-top: 0px; padding: 0px">
+	        	<div class="col s12" style="margin-top: 0px; padding-top: 0px">
+		        	<div class="alert card horizontal col s3" style="display: inline-block; color: yellow; float: right; font-size: 1.1em; z-index: 99" ng-show="gaming">
+	                    {[{update}]}
+	                </div>
+	        		<div class="card large hoverable" style="width: 100%; background: url('/../gifs/giphy.gif')">
+	        			<canvas id="map" height="500px" width="1000px" ng-click="shoot($event)">
+	        				hey from canvas
+	        			</canvas> 
+	        		</div>
+	        		<img type="hidden" id="tank" src="/../gifs/tank.png" ng-show="false"></div>
+	        	</div>
+	        </div>
+     	</div>  
+  	</div>
+  	<script src="/../javascript/controller.js"></script>
+</body>
+</html>  	
