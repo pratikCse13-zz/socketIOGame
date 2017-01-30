@@ -65,12 +65,24 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
         // }, 3000);
     };
 
+    socket.on('updateList', function(){
+        socket.emit('getRooms', {});
+    });
+
+    socket.on('reconnect', function(){
+        alert('You have been discconected. Please reconnect to continue!!');
+    });
 
     socket.on('gameOver', function(data){
         //c;ear canvas
         $scope.playing = false;
         $scope.update = 'Game Over!! You Lost!!';
         $scope.$apply();
+        alert('You Have Been Knocked Out!!');
+    });
+
+    socket.on('youWon', function(){
+        alert('You Won The Game');
     });
 
     socket.on('gameStarted', function(){
@@ -78,12 +90,13 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
         $scope.$apply();
     });
 
-    socket.on('timerId', function(data){
+    /*socket.on('timerId', function(data){
         $scope.timerId = data.timerId;
-    });
+    });*/
 
     socket.on('leftRoom', function(data){
         console.log('left room')
+        socket.emit('getRooms', {});
         $scope.update = data.msg;
         $scope.gaming = false;
         $scope.room = {};
@@ -108,7 +121,11 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
         console.log('joined room')
         $scope.room = data;
         $scope.gaming = true;
-        $scope.creator = false;
+        if($scope.room.ownerSocketId == socket.id) {
+            $scope.creator = true;
+        } else {
+            $scope.creator = false;    
+        }
         $scope.$apply();
     });
 
