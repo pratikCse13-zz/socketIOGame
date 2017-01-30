@@ -1,4 +1,4 @@
-var CONSTANTS = require('./constants.js');
+var CONSTANTS = require('../constants.js');
 
 module.exports.Player = function(id, x, y){
 	return {

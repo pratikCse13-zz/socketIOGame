@@ -1,5 +1,5 @@
-var models = require('./models');
-var utils = require('./utils');
+var models = require('./models.js');
+var utils = require('./utils/utils.js');
 
 /**
  * An authentication middleware.

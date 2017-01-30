@@ -3,7 +3,7 @@ var express = require('express');
 var mongoose = require('mongoose');
 var session = require('express-sessions');
 var async = require('async');
-var CONSTANTS = require('./constants.js');
+var CONSTANTS = require('../constants.js');
 /**
  * Given a user object:
  *

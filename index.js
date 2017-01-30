@@ -16,8 +16,8 @@ var server = sticky(function() {
 	var expressHbs = require('express-handlebars');
 	var cookieParser = require('cookie-parser');
 	var sharedSession = require("express-socket.io-session");
-	var utils = require('./utils.js');
-	var gameUtils = require('./gameUtils.js');
+	var utils = require('./utils/utils.js');
+	var gameUtils = require('./utils/gameUtils.js');
 	var async = require('async');
 	var process = require('process');
 
