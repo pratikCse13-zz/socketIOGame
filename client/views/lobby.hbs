@@ -16,22 +16,25 @@
 <body style="height: 100%"  ng-controller="gameController" ng-init="initialize()" ng-keydown="keyDown($event)" ng-keyup="keyUp($event)" background="">
     <div ui-view style="height: 100%;">
       	<div class="container-fluid">
-      			<div class="nav-wrapper">
-      				<ul>
-      					<li>
-      							
-		      			</li>	
-		      			<li>
-				      		<form style="align: right; display: inline" action="/logout" method="get"> 
-				      			<h4 style="padding: 0px; color: #EF5B25">
-		      				{{user.name}}  |
-		      				</h4>
-			                    <button id="logIn" action="/logout" class="waves-effect waves-light btn col">LOGOUT</button> 
-			                    <input type="hidden" name="_csrf" value="{{csrfToken}}">
-			                </form>
-	      				</li>
-	      			</ul>	
-	      		</div>
+      		<nav style="background-color: transparent">
+				<div class="nav-wrapper">
+					<ul id="nav-mobile" class="right hide-on-med-and-down">
+						<li>
+							<h5 style="padding: 10px; margin: 10px; color: #EF5B25">
+		      					<b>{{user.name}}</b>
+		      				</h5>
+		      			</li>
+		      			<li>	
+							<form style="align: right; display: inline" action="/logout" method="get"> 
+		      					<div style="display: inline-block">
+			                		<button id="logIn" action="/logout" style="margin: 10px" class="waves-effect waves-light btn col">LOGOUT</button> 
+			               	 	</div>	
+			                	<input type="hidden" name="_csrf" value="{{csrfToken}}">
+			            	</form>
+			            </li>	
+					</ul>
+				</div>
+			</nav>
       		<div class="row" style="margin-top: 100px" ng-hide="gaming">
 	        	<div class="col s6 valign-wrapper">
 	        		<div class="card medium hoverable" style="width: 100%; height: 500px">
@@ -58,7 +61,7 @@
 			        </div>		
 	        	</div>
 	        	<div class="col s6 valign-wrapper">
-	        		<div class="card large hoverable" style="width: 100%; height: 500px">
+	        		<div class="card large hoverable" style="width: 100%; height: 500px; overflow: scroll">
 			            <div class="card-content">
 		            		<ul>
 						        <li ><h3 style="color: teal">Join A Room</h3></li>
@@ -81,18 +84,21 @@
 	        	</div>
 	        </div>
 	        <div class="row" style="padding: 20px; padding-bottom: 0px; margin-bottom: 5px">
-	        	<div class="col s6" style="height: 40px">
-	        		<button type="submit" style="margin: 5px" class="waves-effect waves-light btn col s3" ng-click="startGame()" ng-show="creator">Start Game</button>
-	        		<button type="submit" style="margin: 5px" class="waves-effect waves-light btn col s3" ng-click="leaveRoom()" ng-show="gaming">Leave Game</button>
+	        	<div class="col s4">
 	        	</div>
-	        	<div class="col s3">
-	        		
+	        	<div class="col s2" style="height: 40px">
+	        		<button type="submit" style="margin: 5px; width: 100%" class="waves-effect waves-light btn col s3" ng-click="startGame()" ng-show="creator">Start Game</button>
+	        	</div>
+	        	<div class="col s2" style="height: 40px">	
+	        		<button type="submit" style="margin: 5px; width: 100%" class="waves-effect waves-light btn col s3" ng-click="leaveRoom()" ng-show="gaming">Leave Game</button>
+	        	</div>
+	        	<div class="col s4">
 	        	</div>
 	        	
 	        </div>
 	        <div class="row" style="margin-top: 0px; padding: 0px">
 	        	<div class="col s12" style="margin-top: 0px; padding-top: 0px">
-		        	<div class="alert card horizontal col s3" style="display: inline-block; color: yellow; float: right; font-size: 1.1em; z-index: 99" ng-show="gaming">
+		        	<div class="alert card horizontal col s3" style="display: inline-block; padding: 10px; margin: 10px; color: yellow; float: center; font-size: 1.5em; z-index: 99; background-color: transparent; text-align: left" ng-show="gaming">
 	                    {[{update}]}
 	                </div>
 	        		<div class="card large hoverable" style="width: 100%; height: 700px; background-image: url('/../gifs/minecraft.png')">
