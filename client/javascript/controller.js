@@ -26,30 +26,37 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
 
     $scope.ctx = $document[0].getElementById("map").getContext("2d");
     $scope.ctx.font = '30px Arial';
-    $scope.tank = $document[0].getElementById("tank");
-    $scope.ctx.drawImage(tank,  34, 43);
-
+    
     socket.on('newFrame', function(frame){
-        $scope.ctx.fillText('dasdada', 500,500);
-        console.log('new frame')
-        console.log(frame.players[0])
-        $scope.ctx.clearRect(0, 0, 1000, 500);
+        $scope.ctx.clearRect(0, 0, 1200, 700);
         frame.players.forEach(function(player){
-            console.log(frame.players.length)
-            console.log('writing : '+ player.number+ ' at '+player.x+ ' and '+player.y);
-            $scope.ctx.fillText(player.number,player.x,player.y);
+            $scope.ctx.strokeStyle="aqua";
+            $scope.ctx.strokeRect(player.x, player.y, 30, 30);
+            $scope.ctx.lineWidth = 5;
+            $scope.ctx.strokeStyle = '#003300';
+            $scope.ctx.stroke();
         });
 
-        console.log(frame.bullets)
         frame.bullets.forEach(function(bullet){
-            console.log(bullet)
-            $scope.ctx.fillText('o', bullet.x, bullet.y);
+            //ctx.arc(x, y, radius, startAngle, endAngle, anticlockwise);
+            $scope.ctx.beginPath();
+            $scope.ctx.arc(bullet.x, bullet.y, 10, 0, 2*Math.PI, true);
+            $scope.ctx.fillStyle = 'orange';
+            $scope.ctx.fill();
+            $scope.ctx.lineWidth = 5;
+            $scope.ctx.strokeStyle = '#003300';
+            $scope.ctx.stroke();
         });
 
-        console.log(frame.barriers)
         frame.barriers.forEach(function(barrier){
             console.log(barrier)
-            $scope.ctx.fillText('|', barrier.x, barrier.y);
+            if(barrier.x > barrier.y)
+                $scope.ctx.fillText('|', barrier.x, barrier.y);
+            else 
+                $scope.ctx.fillText('_', barrier.x, barrier.y);
+            $scope.ctx.lineWidth = 5;
+            $scope.ctx.strokeStyle = '#003300';
+            $scope.ctx.stroke();
         });
 
         $scope.$apply();
