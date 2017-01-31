@@ -81,6 +81,6 @@ module.exports.updateBullet = function(bullet){
 	//update the position
 	bullet.x += bullet.spdX;
 	bullet.y += bullet.spdY;
-	if(bullet.x>CONSTANTS.canvasSize.x || bullet.x<0 || bullet.y>CONSTANTS.canvasSize.y || bullet.y<0)  
+	if(bullet.x>=CONSTANTS.canvasSize.x || bullet.x<=0 || bullet.y>=CONSTANTS.canvasSize.y || bullet.y<=0)  
 		return true;
 };
