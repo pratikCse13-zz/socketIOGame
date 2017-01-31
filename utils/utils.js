@@ -11,9 +11,6 @@ var CONSTANTS = require('../constants.js');
  *  - Make the user object available to templates as #{user}
  *  - Set a session cookie with the user object
  *
- *  @param {Object} req - The http request object.
- *  @param {Object} res - The http response object.
- *  @param {Object} user - A user object.
  */
 module.exports.createUserSession = function(req, res, user) {
   	var cleanUser = {
@@ -27,6 +24,7 @@ module.exports.createUserSession = function(req, res, user) {
   	res.locals.user = cleanUser;
 };
 
+//util to make a user join a room
 module.exports.joinRoom = function(io, socket, roomDetails, cb){
 	//making the creator leave all rooms apart from the one with his own id
 	io.of('/').adapter.clientRooms(socket.id, function (err, rooms) {
@@ -70,6 +68,7 @@ module.exports.joinRoom = function(io, socket, roomDetails, cb){
 	});
 };
 
+//util to make a user crate a room
 module.exports.createRoom = function(io, socket, roomDetails, cb){
 	//making the creator leave all rooms apart from the one with his own id
 	io.of('/').adapter.clientRooms(socket.id, function (err, rooms) {

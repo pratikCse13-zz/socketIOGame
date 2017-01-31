@@ -1,4 +1,4 @@
-var sticky = require('socketio-sticky-session');
+var sticky = require('socketio-sticky-session');	
 var CONSTANTS = require('./constants.js');
 
 var server = sticky(function() {
@@ -7,7 +7,6 @@ var server = sticky(function() {
 	var express = require('express');
 	var routes = require('./routes/routes');
 	var auth = require('./routes/auth');
-	var room = require('./routes/room');
 	var csrf = require('csurf');
 	var morgan = require('morgan');
 	var middlewares = require('./middlewares');
@@ -46,6 +45,7 @@ var server = sticky(function() {
 
 	app.use(morgan('dev'));
 
+	//setup session
 	var session = require('express-session')({
 		secret: CONSTANTS.sessionSecretKey,
 	    resave: false,
@@ -63,45 +63,34 @@ var server = sticky(function() {
 
 	app.use(session);
 
+	//setup socket.io sessions
 	io.use(sharedSession(session, {
 	    autoSave:true
 	}));
 
+	//setup csrf to prevent csrf attacks
 	app.use(csrf({cookie: true}));
 
 	app.use(middlewares.authenticate);
 
 	app.use(routes);
 	app.use(auth);
-	//app.use(room);
 
-	var GameTimer;
+	var GameTimer;			//to keep a record of the timerId of the setInterval of the game loop
 
+	//on connection of redis 
 	redisClient.on('connect', function(){
+		//on connection of socket.io
 		io.on('connection', function(socket){
+
 			console.log('worker.process.id:' + process.pid);
-		
-			//console.log('socket.handshake.session.user')
-			//console.log(socket.handshake.session.user)
-
-			/*socket.on('connect', function(){
-				console.log('firing connect')
-				if(socket.handshake.session.user) {
-					io.of('/').adapter.allRooms(function (err, rooms) {
-					  	if(err) {
-					  		socket.emit('roomListFetchError', {errorMsg: 'Something Bad Happened!! Please try again.'});
-					  	} else {
-					  		socket.emit('roomList', {rooms: rooms}); 
-						}
-					});
-				} else {
-					socket.emit('roomListFetchError', {errorMsg: 'Sorry User could not be authenticated!! Please try again.'});
-				}
-			});*/
-
+	
+			//event listener and returns all available rooms 
 			socket.on('getRooms', function(data){
+				//if user session exists
 				if(socket.handshake.session.user) {
 					async.waterfall([
+						//get all the rooms that exist on this namespace
 						function(callback){
 							io.of('/').adapter.allRooms(function (err, rooms) {
 								if(err) {
@@ -112,6 +101,7 @@ var server = sticky(function() {
 								}
 							});		
 						},
+						//remove those rooms which are created by the socketIds
 						function(rooms, callback){
 							io.of('/').adapter.clients(function (err, clients) {
 								if(err) {
@@ -131,8 +121,7 @@ var server = sticky(function() {
 						if(err) {
 					  		socket.emit('roomListFetchError', {errorMsg: err.message});
 					  	} else {
-					  		// console.log('matture rooms')
-					  		// console.log(rooms)
+					  		//emit the room list 
 					  		socket.emit('roomList', {rooms: rooms}); 
 						}
 					});
@@ -141,20 +130,23 @@ var server = sticky(function() {
 				}
 			});
 			
-			//create room event
+			//event listener for the request to create a room
 			socket.on('createRoom', function(roomDetails){
+				//if user session exists
 				if(socket.handshake.session.user) {
 					//create the room in redis client
 					redisClient.del(socket.id+'||'+roomDetails.roomName+'||'+socket.handshake.session.user.name);
 					redisClient.set(socket.id+'||'+roomDetails.roomName+'||'+socket.handshake.session.user.name,roomDetails.password);
 					//make the socket leave all rooms except the one with its own id and join this new room hence creating it 
 					utils.createRoom(io, socket, roomDetails, function(status){
-
+						//if creation of room was successful
 						if(status) {
+							//create roomDetails object
 							roomDetails.ownerName = socket.handshake.session.user.name;
 							roomDetails.ownerSocketId = socket.id;
 							delete roomDetails.password;
 							socket.emit('createdRoom', roomDetails);
+							//update to the client about the creation of the room
 							socket.emit('update', {msg: 'created new room: '+roomDetails.roomName});  
 							//publishing to all the clients new room is created
 							io.of('/').adapter.clients(function(err, clients){
@@ -171,8 +163,11 @@ var server = sticky(function() {
 				}			
 			});
 
+			//event listener for request to join a room
 			socket.on('joinRoom', function(roomDetails){
+				//check if user session exists
 				if(socket.handshake.session.user) {
+					//create the room extension
 					var roomExtension = roomDetails.ownerSocketId+'||'+roomDetails.roomName+'||'+roomDetails.ownerName;
 					async.waterfall([
 						//fetch all the rooms currently existing
@@ -242,10 +237,14 @@ var server = sticky(function() {
 				}
 			});
 
+			//event listener for the request to leave a room
 			socket.on('leaveRoom', function(roomDetails){
+				//check if user session exists
 				if(socket.handshake.session.user) {
+					//create the room extension
 					var roomExtension = roomDetails.ownerSocketId+'||'+roomDetails.roomName+'||'+roomDetails.ownerName;
 					async.series([
+						//make the user leave the room
 						function(callback){
 							io.of('/').adapter.remoteLeave(socket.id, roomExtension, function(err){
 								if(err) {
@@ -257,14 +256,16 @@ var server = sticky(function() {
 								}
 							});	
 						},
-						//remove this players data from the game in redis client**********************************
+						//notify the other players in the room about the exit of this user
 						function(callback){
 							io.of('/').adapter.clients([roomExtension], function(err, clients){
 								if(!err){
+									//if there are users in the room then notify them
 									if(clients.length != 0) {
 										clients.forEach(function(client){
 											io.of('/').to(client).emit('update', {msg: socket.handshake.session.user.name+' has left the room.'});
 										});
+									//if there are no users in the room then ask all the users to update their room list
 									} else {
 										io.of('/').adapter.clients(function(err, clients){
 											clients.forEach(function(client){
@@ -286,6 +287,7 @@ var server = sticky(function() {
 				}
 			});
 
+			//event listener for the press of direction key by the user
 			socket.on('keyPress',function(data) {
 				//fetch the player from redis
 				redisClient.hgetall(socket.id, function(err, player){
@@ -303,9 +305,13 @@ var server = sticky(function() {
 				});
 			});
 
+			//event listener for the shoot key press by the user
 			socket.on('shoot', function(data){
+				//create the room extension
 				var roomExtension = data.roomDetails.ownerSocketId+'||'+data.roomDetails.roomName+'||'+data.roomDetails.ownerName;
+				//generate the bullet id
 				var bulletId = roomExtension+'||'+socket.id;
+				//get the player details to whom his bullet belongs
 				redisClient.hgetall(socket.id, function(err, player){
 					if(!err && player) {
 						data.x -= player.x;
@@ -313,18 +319,24 @@ var server = sticky(function() {
 						angle = Math.atan2(data.y,data.x);
 						spdX = Math.ceil(CONSTANTS.bulletSpeed * Math.cos(angle));
 						spdY = Math.ceil(CONSTANTS.bulletSpeed * Math.sin(angle));
+						//crate the bullet
 						var bullet = gameUtils.Bullet(bulletId, parseInt(player.x), parseInt(player.y), spdX, spdY);
+						//save the bullet to the bullet-list of this lobby in redis client 
 						redisClient.sadd(roomExtension+'||bullets', bulletId);
+						//save the bullet details to redis client
 						redisClient.hmset(bulletId, bullet);
 					}	
 				});
 			});
 
+			//event listener for the request to start a game
 			socket.on('startGame', function(roomDetails){
+				//check if user session exists
 				if(socket.handshake.session.user) {
 					if(roomDetails.ownerSocketId == undefined || roomDetails.ownerName == undefined) {
 						socket.emit('startGameError', {errorMsg: 'Something went wrong!'});
 					} else {
+						//generate the extension with which the lobby is registered in socket connections
 						var roomExtension = roomDetails.ownerSocketId+'||'+roomDetails.roomName+'||'+roomDetails.ownerName;
 						async.waterfall([
 							//get all the socket id connected to this room
@@ -338,29 +350,26 @@ var server = sticky(function() {
 									}
 								});	
 							},
-							//initialize players for these sockets
+							//initialize players for these sockets in redis client
 							function(socketIds, callback){
 								for(var i=0;i<socketIds.length;i++) {
 									var player = gameUtils.Player(socketIds[i], CONSTANTS.startPositions[i].x, CONSTANTS.startPositions[i].y);
+									//delete garbage data from redis client
 									redisClient.del(socketIds[i]);
+									//save the player details inredis client with its socket id as key
 									redisClient.hmset(socketIds[i], player);
 								}
+								//delete garbage data for lobby name in redis client
 								redisClient.del(roomExtension+'||players');
+								//add the players to the list of players in this lobby on redis client
 								socketIds.forEach(function(socketId){
 									redisClient.sadd(roomExtension+'||players', socketId);	
 								});
 								return callback(null, socketIds);
 							},
-							/*//initialize bullets
-							function(socketIds, callback){
-								//for bullets
-								redisClient.del(roomExtension+'||bullets');
-								
-								return callback(null, socketIds);
-							},*/
 							//fire game started event to these sockets
 							function(socketIds, callback){
-								//start emitting frames
+								//loop that shoots frames to all the connected sockets to this lobby
 								var GameTimer = setInterval(function(){
 									var frame = {};
 									frame.players = [];
@@ -382,6 +391,7 @@ var server = sticky(function() {
 															}
 														});	
 													},
+													//update the player positions 
 													function(playerIds, nestedCallback){
 														async.each(playerIds, function(playerId, cb){
 															redisClient.hgetall(playerId, function(err, player){
@@ -390,8 +400,11 @@ var server = sticky(function() {
 																	cb(err, null);
 																} else {
 																	if(player != undefined && player != null) {
+																		//update player postiion
 																		gameUtils.updatePlayer(player);
+																		//save updated player to redis client
 																		redisClient.hmset(playerId, player);
+																		//pus hthe player to frame 
 																		frame.players.push(player);		
 																	}
 																	cb(null, null);
@@ -416,8 +429,10 @@ var server = sticky(function() {
 												});
 											},
 											bullets: function(innerCallback){
+												//get the bullets of this frame and update and save them
 												async.waterfall([
 													function(nestedCallback){
+														//get all the bullets that exist in the frame
 														redisClient.smembers(roomExtension+'||bullets', function(err, bulletIds){
 															if(err) {
 																err.message = 'Something bad Happened. Please Try Again';
@@ -427,15 +442,19 @@ var server = sticky(function() {
 															}
 														});	
 													},
+													//update the positions of all the bulllets
 													function(bulletIds, nestedCallback){
 														async.each(bulletIds, function(bulletId, cb){
+															//get the bullet details from redis client
 															redisClient.hgetall(bulletId, function(err, bullet){
 																if(err) {
 																	err.message = 'Something bad Happened. Please Try Again';
 																	cb(err, null);
 																} else {
 																	if(bullet != undefined && bullet != null) {
+																		//update and check if the bullet is within the field
 																		var removeBullet = gameUtils.updateBullet(bullet);
+																		//if bullet is outside the field boundary remove it else add it to frame
 																		if(removeBullet) {
 																			redisClient.srem(roomExtension+'||bullets', bulletId);	
 																			redisClient.del(bulletId);
@@ -465,15 +484,20 @@ var server = sticky(function() {
 													}
 												});
 											},
+											//add the barriers to the frame
 											barriers: function(innerCallback){
 												frame.barriers = CONSTANTS.barrierPositions;
 												return innerCallback(null, null);
 											}
 										}, function(err, results){
-											//check for collision
+											//check for collision of the bullets with the players and barriers
 											frame.bullets.forEach(function(bullet){
+												//check for collision with each player
 												frame.players.forEach(function(player){
+													//if distance between the player and the bullet is less than or equal to collision-distance
+													//if collision has occurred bullet and player are removed from frame
 													if(gameUtils.getDistance(bullet, player)<=CONSTANTS.collisionDistance &&
+														//check if the bullet belongs to the player itself
 														bullet.id.split('||')[3] != player.id){
 														//remove bullet from current frame
 														frame.bullets.splice(frame.bullets.indexOf(bullet), 1);
@@ -487,26 +511,33 @@ var server = sticky(function() {
 														redisClient.srem(roomExtension+'||players', player.id);
 														//remove player from redis memory
 														redisClient.del(player.id);
+														//notify the player that he has been killed
 														io.of('/').to(player.id).emit('gameOver', {});
 													}
 												});
 												frame.barriers.forEach(function(barrier){
+													//if distance between the barrier and the bullet is less than or equal to collision-distance
+													//if collision has occurred bullet is removed from frame
 													if(gameUtils.getDistance(bullet, barrier)<=CONSTANTS.collisionDistance){
 														//remove bullet from current frame
 														frame.bullets.splice(frame.bullets.indexOf(bullet), 1);
 														//remove bullet from bullets collection in redis
 														redisClient.srem(roomExtension+'||bullets', bullet.id);
 														//remove bullet from redis memory
+														redisClient.del(bullet.id);
 													}
 												});
 											});
+											//if there is only one player in the room notify him that he has won the game 
 											if(frame.players.length==1) {
 												io.of('/').to(frame.players[0].id).emit('youWon', {});
 												socketIds.forEach(function(socketId){
 													io.of('/').to(socketId).emit('newFrame', frame);
 												});
+												//stop the frame emitting loop if there is only one player left
 												clearInterval(GameTimer);
 											} else {
+												//emit the frame to all the players in the room
 												socketIds.forEach(function(socketId){
 													io.of('/').to(socketId).emit('newFrame', frame);
 												});
@@ -529,18 +560,6 @@ var server = sticky(function() {
 							}
 							//socket.emit('timerId', {});
 						});
-						
-						
-						//start loop
-							//fetch and update the player position
-							//fetch and update the bullet position
-							//fetch barriers
-							//check for collisions
-								//if true fire game over events
-								//remove bullets
-							//create pack
-							//send frame
-						//end loop
 					}
 				} else {
 					io.of('/').to(socket.id).emit('reconnect', {from: 'startGame'});

@@ -15,11 +15,11 @@ module.exports.User = connection.model('User', new Schema({
   	password: {type: String, required: 'Passowrd is required.' }
 }));
 
-module.exports.Room = connection.model('Room', new Schema({
+/*module.exports.Room = connection.model('Room', new Schema({
   	id:        ObjectId,
   	name:      {type: String, required: 'Name is required.' },
   	password:  {type: String, required: 'Passowrd is required.' },
   	owner:     {type: ObjectId, required: 'Unauthenticated Creation.', unique: true },
   	ownerName: {type: String, required: 'Unauthenticated Creation.' },
   	members:   {type: [ObjectId]}
-}));
+}));*/

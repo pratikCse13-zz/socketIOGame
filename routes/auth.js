@@ -5,9 +5,8 @@ var bcrypt = require('bcryptjs');
 var models = require('../models.js');
 var utils = require('../utils/utils.js');
 var validator = require('validator');
-//var models = require('../models');
-//var utils = require('../utils');
 var path = require('path');
+var CONSTANTS = require('../constants.js');
 
 mongoose.Promise = require('bluebird');
 var ObjectID = require('mongodb').ObjectID;
@@ -27,7 +26,7 @@ router.get('/register',function(req, res) {
 /**
  * Register the user.
  *
- * Once a user is logged in, they will be sent to the dashboard page.
+ * Once a user is logged in, he/she will be sent to the dashboard page.
  */
 router.post('/register', function(req, res) {
 	req.body.name = validator.trim(req.body.name.toString(), ['~','`','!','@','#','\\$','%','^','&','*','\\(','\\)','\\/','-','_','+','=','\\{','\\}','\\[',';',':','\\<','\\>',',','.','?','|','\\]',' ']);
@@ -35,46 +34,57 @@ router.post('/register', function(req, res) {
 	req.body.email = validator.trim(req.body.email.toString(), [' ']);
 	req.body.password = req.body.password.toString();
 	
+	//encrypt and create a hash of the password
 	var salt = bcrypt.genSaltSync(10);
   	var hash = bcrypt.hashSync(req.body.password, salt);
   	
   	var errorMsg = '';
   	var invalid = false;
 
+  	//check if the name is empty
   	if(validator.isEmpty(req.body.name)) {
-  		invaid = true;
+  		invalid = true;
   		errorMsg += 'Name is required.\n';
   	}
 
+  	//check if the email is a valid one
   	if(!validator.isEmail(req.body.email)) {
   		invalid = true;
   		errorMsg += '\nThat email is not a valid one.\n';
   	}
 
-  	if(!validator.isLength(req.body.password, {min: 6})) {
+  	//check if the length of the password is altelast the minimum
+  	if(!validator.isLength(req.body.password, {min: CONSTANTS.passwordLength})) {
   		invalid = true; 
   		errorMsg += '\nPassword must be atleast six characters.\n'
   	}
 
+  	//if there are any validation errors ask the user to retry
   	if(invalid) {
   		return res.render('register.hbs', {csrfToken: req.csrfToken(), error: errorMsg});
   	}
 
+  	//create the user instance
 	var user = new models.User({
 	    name: req.body.name,
 	    email: req.body.email,
 	    password: hash
 	});
-
+	
+	//save the user instance
 	user.save(function(err, user) {
 	    if (err) {
 	    	var errorMsg = 'Something bad happened! Please try again.';
 
+	    	//this happens when there are any unique key constraint failure
 	        if (err.code === 11000) {
 	            errorMsg = 'That email is already taken, please try another.';
 	        }
+
+	        //ask the user to retry registration
 	        res.render('register.hbs', {csrfToken: req.csrfToken(), error: errorMsg});
 	    } else {
+	    	//create user session
 	        utils.createUserSession(req, res, user);
 	        res.redirect('/lobby');
 	    }
@@ -98,14 +108,17 @@ router.get('/login',function(req, res) {
 router.post('/login', function(req, res) {
 	req.body.email = req.body.email.toString();
 	req.body.password = req.body.password.toString();
+	//check if a user with this emailId exists
 	models.User.findOne({ email: req.body.email }, 'name email password', function(err, user) {
 	    if(err) {
 	    	var errorMsg = 'Something bad happened! Please try again.';
 	    	res.render('register.hbs', {csrfToken: req.csrfToken(), error: errorMsg});
 	    } else {
 	    	if (!user) {
-		      res.render('login.hbs', { error: "No user registered with that EmailId.", csrfToken: req.csrfToken() });
+	    		//if user is not found with that emailId
+		      	res.render('login.hbs', { error: "No user registered with that EmailId.", csrfToken: req.csrfToken() });
 		    } else {
+		    	//comapre te password
 		    	if (bcrypt.compareSync(req.body.password, user.password)) {
 		        	utils.createUserSession(req, res, user);
 		        	res.redirect('/lobby');

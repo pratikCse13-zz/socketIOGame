@@ -30,7 +30,9 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
     
     socket.on('newFrame', function(frame){
         $scope.ctx.clearRect(0, 0, 1200, 700);
+        
         frame.players.forEach(function(player){
+            
             $scope.ctx.strokeStyle="aqua";
             $scope.ctx.strokeRect(player.x, player.y, 30, 30);
             $scope.ctx.lineWidth = 5;

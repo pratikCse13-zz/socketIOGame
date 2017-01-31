@@ -9,12 +9,12 @@ var utils = require('./utils/utils.js');
  * If no session exists this will redirect to homepage otherwise to lobby
  */
 module.exports.authenticate = function(req, res, next) {
-    console.log('req.session')
-    console.log(req.session) 
     if (req.session && req.session.user) {
-        console.log('1')
+        //find the user with this email id
         models.User.findOne({ email: req.session.user.email }, 'name email', function(err, user) {
+            //if user exists
             if (user) {
+                //create the session of the user
                 utils.createUserSession(req, res, user);
                 switch(req.path){
                   case '/': 
@@ -32,13 +32,13 @@ module.exports.authenticate = function(req, res, next) {
                   default:
                       next();
                 }
+            //redirect user to home page
             } else {
                   res.redirect('/');
             }
         });
     } else {
-        console.log('req.path')
-        console.log(req.path) 
+        //if the user is not logged in redirect to home page
         if(req.path === '/lobby')
             res.redirect('/');
         else 

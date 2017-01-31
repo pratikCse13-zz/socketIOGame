@@ -5,6 +5,7 @@ var utils = require('../utils/utils.js');
 var request = require('request');
 var async = require('async');
 var models = require('../models.js');
+
 /**
  * Render the home page.
  */
@@ -16,9 +17,7 @@ router.get('/', function(req, res) {
  * Render the lobby page.
  */
 router.get('/lobby', function(req, res) {
-	models.Room.find({}, function(err, rooms){
-		res.render('lobby.hbs', {rooms: rooms, csrfToken: req.csrfToken()});
-	});
+	res.render('lobby.hbs', {csrfToken: req.csrfToken()});
 });
 
 module.exports = router;
