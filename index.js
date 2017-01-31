@@ -144,23 +144,18 @@ var server = sticky(function() {
 			//create room event
 			socket.on('createRoom', function(roomDetails){
 				if(socket.handshake.session.user) {
-					console.log('socket.handshake.session.user in createRom')
-					console.log(socket.handshake.session.user)
-					console.log('createRoom called')
 					//create the room in redis client
 					redisClient.del(socket.id+'||'+roomDetails.roomName+'||'+socket.handshake.session.user.name);
 					redisClient.set(socket.id+'||'+roomDetails.roomName+'||'+socket.handshake.session.user.name,roomDetails.password);
 					//make the socket leave all rooms except the one with its own id and join this new room hence creating it 
 					utils.createRoom(io, socket, roomDetails, function(status){
 
-						console.log('returned from util')
 						if(status) {
 							roomDetails.ownerName = socket.handshake.session.user.name;
 							roomDetails.ownerSocketId = socket.id;
 							delete roomDetails.password;
 							socket.emit('createdRoom', roomDetails);
 							socket.emit('update', {msg: 'created new room: '+roomDetails.roomName});  
-							console.log('reaching')		  	
 							//publishing to all the clients new room is created
 							io.of('/').adapter.clients(function(err, clients){
 								clients.forEach(function(client){
@@ -168,7 +163,6 @@ var server = sticky(function() {
 								});
 							});	
 						} else {
-							console.log('other')
 							socket.emit('createRoomError', {errorMsg: 'Something bad happaend. Please try again.'});
 						}
 					});
@@ -179,8 +173,6 @@ var server = sticky(function() {
 
 			socket.on('joinRoom', function(roomDetails){
 				if(socket.handshake.session.user) {
-					console.log('join request')
-					console.log(roomDetails)
 					var roomExtension = roomDetails.ownerSocketId+'||'+roomDetails.roomName+'||'+roomDetails.ownerName;
 					async.waterfall([
 						//fetch all the rooms currently existing
@@ -212,9 +204,6 @@ var server = sticky(function() {
 						//match the passwords
 						function(roomPassword, callback){
 							if(roomPassword !== roomDetails.password) {
-								console.log('no')
-								console.log(roomPassword)
-								console.log(roomDetails.password)
 								return callback(new Error('Password Mismatch!'), null);
 							} else {
 								return callback(null);	
@@ -277,7 +266,6 @@ var server = sticky(function() {
 											io.of('/').to(client).emit('update', {msg: socket.handshake.session.user.name+' has left the room.'});
 										});
 									} else {
-										console.log('actually doing it')
 										io.of('/').adapter.clients(function(err, clients){
 											clients.forEach(function(client){
 												io.of('/').to(client).emit('updateList', {});
@@ -299,8 +287,6 @@ var server = sticky(function() {
 			});
 
 			socket.on('keyPress',function(data) {
-				console.log('key press called')
-				console.log(data)
 				//fetch the player from redis
 				redisClient.hgetall(socket.id, function(err, player){
 					if(!err && player) {
@@ -318,16 +304,15 @@ var server = sticky(function() {
 			});
 
 			socket.on('shoot', function(data){
-				console.log('shoot called')
 				var roomExtension = data.roomDetails.ownerSocketId+'||'+data.roomDetails.roomName+'||'+data.roomDetails.ownerName;
 				var bulletId = roomExtension+'||'+socket.id;
 				redisClient.hgetall(socket.id, function(err, player){
 					if(!err && player) {
 						data.x -= player.x;
 						data.y -= player.y;
-						angle = Math.random()*360;//Math.atan2(data.y,data.x);
-						spdX = Math.ceil(CONSTANTS.bulletSpeed * Math.cos(angle/180*Math.PI));
-						spdY = Math.ceil(CONSTANTS.bulletSpeed * Math.sin(angle/180*Math.PI));
+						angle = Math.atan2(data.y,data.x);
+						spdX = Math.ceil(CONSTANTS.bulletSpeed * Math.cos(angle));
+						spdY = Math.ceil(CONSTANTS.bulletSpeed * Math.sin(angle));
 						var bullet = gameUtils.Bullet(bulletId, parseInt(player.x), parseInt(player.y), spdX, spdY);
 						redisClient.sadd(roomExtension+'||bullets', bulletId);
 						redisClient.hmset(bulletId, bullet);
@@ -337,16 +322,10 @@ var server = sticky(function() {
 
 			socket.on('startGame', function(roomDetails){
 				if(socket.handshake.session.user) {
-					console.log('socket.handshake.session.user in start game')
-					console.log(socket.handshake.session.user)
-					console.log('roomDetails in start game')
-					console.log(roomDetails)
 					if(roomDetails.ownerSocketId == undefined || roomDetails.ownerName == undefined) {
 						socket.emit('startGameError', {errorMsg: 'Something went wrong!'});
 					} else {
 						var roomExtension = roomDetails.ownerSocketId+'||'+roomDetails.roomName+'||'+roomDetails.ownerName;
-						console.log('here')
-						console.log(roomExtension)
 						async.waterfall([
 							//get all the socket id connected to this room
 							function(callback){
@@ -355,8 +334,6 @@ var server = sticky(function() {
 										err.message = 'Somethign bad happened. Please try again.'
 										return callback(err, null);
 									} else {
-										console.log('socketIds')
-										console.log(socketIds)
 										return callback(null, socketIds);
 									}
 								});	
@@ -365,11 +342,6 @@ var server = sticky(function() {
 							function(socketIds, callback){
 								for(var i=0;i<socketIds.length;i++) {
 									var player = gameUtils.Player(socketIds[i], CONSTANTS.startPositions[i].x, CONSTANTS.startPositions[i].y);
-									console.log('created PLayer')
-									console.log(player.x)
-									console.log(player.y)
-									console.log(player.spdX)
-									console.log(player.spdY)
 									redisClient.del(socketIds[i]);
 									redisClient.hmset(socketIds[i], player);
 								}
@@ -403,6 +375,7 @@ var server = sticky(function() {
 													function(nestedCallback){
 														redisClient.smembers(roomExtension+'||players', function(err, playerIds){
 															if(err) {
+																err.message = 'Something bad Happened. Please Try Again';
 																nestedCallback(err, null);
 															} else {
 																nestedCallback(null, playerIds);
@@ -413,6 +386,7 @@ var server = sticky(function() {
 														async.each(playerIds, function(playerId, cb){
 															redisClient.hgetall(playerId, function(err, player){
 																if(err) {
+																	err.message = 'Something bad Happened. Please Try Again';
 																	cb(err, null);
 																} else {
 																	if(player != undefined && player != null) {
@@ -425,6 +399,7 @@ var server = sticky(function() {
 															});
 														}, function(err){
 															if(err) {
+																err.message = 'Something bad Happened. Please Try Again';
 																nestedCallback(err);
 															} else {
 																nestedCallback(null);
@@ -433,6 +408,7 @@ var server = sticky(function() {
 													}
 												], function(err){
 													if(err) {
+														err.message = 'Something bad Happened. Please Try Again';
 														innerCallback(err, null);
 													} else {
 														innerCallback(null, null);
@@ -444,6 +420,7 @@ var server = sticky(function() {
 													function(nestedCallback){
 														redisClient.smembers(roomExtension+'||bullets', function(err, bulletIds){
 															if(err) {
+																err.message = 'Something bad Happened. Please Try Again';
 																nestedCallback(err, null);
 															} else {
 																nestedCallback(null, bulletIds);
@@ -454,11 +431,10 @@ var server = sticky(function() {
 														async.each(bulletIds, function(bulletId, cb){
 															redisClient.hgetall(bulletId, function(err, bullet){
 																if(err) {
+																	err.message = 'Something bad Happened. Please Try Again';
 																	cb(err, null);
 																} else {
 																	if(bullet != undefined && bullet != null) {
-																		console.log('bullet befoer update')
-																		console.log(bullet)
 																		var removeBullet = gameUtils.updateBullet(bullet);
 																		if(removeBullet) {
 																			redisClient.srem(roomExtension+'||bullets', bulletId);	
@@ -467,14 +443,13 @@ var server = sticky(function() {
 																			redisClient.hmset(bulletId, bullet);
 																			frame.bullets.push(bullet);
 																		}
-																		console.log('bullet after update')
-																		console.log(bullet)		
 																	}
 																	cb(null, null);
 																}
 															});
 														}, function(err){
 															if(err) {
+																err.message = 'Something bad Happened. Please Try Again';
 																nestedCallback(err);
 															} else {
 																nestedCallback(null);
@@ -483,6 +458,7 @@ var server = sticky(function() {
 													}
 												], function(err){
 													if(err) {
+														err.message = 'Something bad Happened. Please Try Again';
 														innerCallback(err, null);
 													} else {
 														innerCallback(null, null);
@@ -548,6 +524,9 @@ var server = sticky(function() {
 								return callback(null);
 							},
 						], function(err, result){
+							if(err) {
+								socket.emit('startGameError', {errorMsg: err.msg});
+							}
 							//socket.emit('timerId', {});
 						});
 						

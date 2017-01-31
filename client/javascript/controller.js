@@ -25,6 +25,7 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
     $scope.timerId = '';
 
     $scope.ctx = $document[0].getElementById("map").getContext("2d");
+    //$scope.rectangle = $document[0].getElementById("map").getBoundingClientRect();
     $scope.ctx.font = '30px Arial';
     
     socket.on('newFrame', function(frame){
@@ -44,12 +45,12 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
             $scope.ctx.fillStyle = 'orange';
             $scope.ctx.fill();
             $scope.ctx.lineWidth = 5;
-            $scope.ctx.strokeStyle = '#003300';
-            $scope.ctx.stroke();
+            //$scope.ctx.strokeStyle = '#003300';
+            //$scope.ctx.stroke();
         });
 
         frame.barriers.forEach(function(barrier){
-            console.log(barrier)
+            //console.log(barrier)
             if(barrier.x > barrier.y)
                 $scope.ctx.fillText('|', barrier.x, barrier.y);
             else 
@@ -77,8 +78,7 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
     });
 
     socket.on('reconnect', function(data){
-        console.log(data)
-        alert('You have been discconected. Please reconnect to continue!!'+ data.from);
+        alert('You have been discconected. Please reconnect to continue!!');
     });
 
     socket.on('gameOver', function(data){
@@ -184,8 +184,8 @@ app.controller('gameController',['$scope', '$http', '$document', function($scope
         if($scope.playing) {
             console.log(event)
             console.log('CALLING SHOOT')
-            var x = event.clientX;// - $scope.ctx.getBoundingClientRect().left;
-            var y = event.clientY;// - $scope.ctx.getBoundingClientRect().top;
+            var x = event.clientX - $document[0].getElementById("map").getBoundingClientRect().left;
+            var y = event.clientY - $document[0].getElementById("map").getBoundingClientRect().top;
             socket.emit('shoot', {x: x, y: y, roomDetails: $scope.room});
         }
     };
